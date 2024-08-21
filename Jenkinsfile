@@ -13,10 +13,6 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
-                // Install Node.js and npm if necessary
-                sh "nvm install ${NODE_VERSION}"
-                sh "nvm use ${NODE_VERSION}"
-                
                 // Install Angular CLI and project dependencies
                 sh 'npm install -g @angular/cli'
                 sh 'npm install'
