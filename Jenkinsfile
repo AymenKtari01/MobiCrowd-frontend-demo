@@ -1,7 +1,7 @@
 pipeline {
     agent {
         docker {
-            image 'node:latest' 
+            image 'node:latest'
             args '-v /var/jenkins_home/.npm:/root/.npm' // Persist npm cache across builds
         }
     }
@@ -11,7 +11,7 @@ pipeline {
         DockerRepo_Credentials=credentials('DockerRepo')
     }
     parameters{
-        booleanParam(name: 'executeTests' , defaultValue: true , description: 'this parameter decides wether the tests will be executed or not ' ) 
+        booleanParam(name: 'executeTests' , defaultValue: true , description: 'this parameter decides whether the tests will be executed or not' ) 
     }
     stages {
 
@@ -25,21 +25,20 @@ pipeline {
 
         stage('Build') {
             steps {
-                echo " Building ... "
+                echo "Building the Angular project..."
+                sh 'ng build --prod'
             }
         }
 
         stage('Build and push Docker Image') {
             steps {
                 withCredentials([usernamePassword(credentialsId:'DockerRepo', passwordVariable:'PASS' , usernameVariable:'USER')]) {
-                sh "docker build -t ${env.DOCKER_IMAGE_NAME}:1.0"
-                sh "echo $PASS | docker login -u $USER --password-stdin "
-                sh "docker push ${env.DOCKER_IMAGE_NAME}:1.0"
+                    sh "docker build -t ${env.DOCKER_IMAGE_NAME}:1.0 ."
+                    sh "echo $PASS | docker login -u $USER --password-stdin"
+                    sh "docker push ${env.DOCKER_IMAGE_NAME}:1.0"
                 }
             }
         }
-
-
 
         stage('Test') {
             when {
@@ -48,21 +47,17 @@ pipeline {
                 }
             }
             steps {
-                echo " Testing ... "
+                echo "Testing the project..."
+                sh 'ng test --watch=false'
             }
         }
-
-        
 
         stage('Deploy') {
-
             steps {
-
-                echo " Deploying ...  " 
+                echo "Deploying the application..."
+                // Add your deployment steps here
             }
         }
-
-        
     }
 
     post {
