@@ -1,8 +1,12 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'node:latest' 
+            args '-v /var/jenkins_home/.npm:/root/.npm' // Persist npm cache across builds
+        }
+    }
 
     environment {
-        NODE_VERSION = '14'
         DOCKER_IMAGE_NAME = 'aymenktari01/mobicrowd_repo'
         DockerRepo_Credentials=credentials('DockerRepo')
     }
