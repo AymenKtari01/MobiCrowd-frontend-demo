@@ -7,11 +7,11 @@ pipeline {
 
     environment {
         DOCKER_IMAGE_NAME = 'aymenktari01/mobicrowd_repo'
-        DockerRepo_Credentials = credentials('DockerRepo')
+        DOCKER_CREDENTIALS_ID = 'DockerRepo'
     }
     
     parameters {
-        booleanParam(name: 'executeTests', defaultValue: true, description: 'this parameter decides whether the tests will be executed or not')
+        booleanParam(name: 'executeTests', defaultValue: true, description: 'This parameter decides whether the tests will be executed or not')
     }
     
     stages {
@@ -30,12 +30,14 @@ pipeline {
             }
         }
 
-        stage('Build and push Docker Image') {
+        stage('Build and Push Docker Image') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'DockerRepo', passwordVariable: 'PASS', usernameVariable: 'USER')]) {
-                    sh "docker build -t ${env.DOCKER_IMAGE_NAME}:1.0 ."
-                    sh "echo $PASS | docker login -u $USER --password-stdin"
-                    sh "docker push ${env.DOCKER_IMAGE_NAME}:1.0"
+                script {
+                    docker.withRegistry('https://index.docker.io/v1/', env.DOCKER_CREDENTIALS_ID) {
+                        def customImage = docker.build("${env.DOCKER_IMAGE_NAME}:1.0")
+                        customImage.push('latest')
+                        customImage.push('1.0')
+                    }
                 }
             }
         }
