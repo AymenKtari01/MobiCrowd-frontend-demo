@@ -1,0 +1,42 @@
+<div class="split-container">
+  <!-- Left side: Image upload and Metadata form -->
+  <div class="left-side">
+    <h2>Submit Image & Metadata</h2>
+    <!-- Image upload section -->
+    <input type="file" (change)="onFileSelected($event)" accept="image/*">
+    
+    <!-- Metadata form -->
+    <form>
+      <div *ngFor="let input of metadataInputs; let i = index">
+        <label for="metadata{{i}}">Metadata {{i + 1}}:</label>
+        <input id="metadata{{i}}" type="text" [(ngModel)]="metadataInputs[i]" name="metadata{{i}}">
+      </div>
+    </form>
+
+    <!-- Predict button -->
+    <button (click)="predict()">Predict</button>
+  </div>
+
+  <!-- Right side: Display results -->
+  <div class="right-side">
+    <h2>Results</h2>
+    <!-- Display the reconstructed image -->
+    <div *ngIf="imageUrl" style="text-align: center;">
+      <h3>Reconstructed Image:</h3>
+      <img [src]="imageUrl" alt="Reconstructed Image">
+    </div>
+    
+    <!-- Display the predicted class name -->
+    <div *ngIf="predictedClassName">
+      <p>Predicted Class: {{ predictedClassName }}</p>
+    </div>    
+      
+    <div *ngIf="metadata.length">
+      <h3>Reconstructed Metadata:</h3>
+      <ul>
+        <li *ngFor="let value of metadata">Metadata Value: {{ value }}</li>
+      </ul>
+    </div>
+    
+  </div>
+</div>
