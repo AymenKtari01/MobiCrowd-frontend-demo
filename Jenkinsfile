@@ -4,7 +4,6 @@ pipeline {
     environment {
         NODE_VERSION = '14'
         DOCKER_IMAGE_NAME = 'aymenktari01/mobicrowd_repo'
-        DOCKER_REGISTRY_URL = 'https://index.docker.io/v1/'
         DockerRepo_Credentials=credentials('DockerRepo')
     }
     parameters{
@@ -30,6 +29,16 @@ pipeline {
             }
         }
 
+        stage('Build and push Docker Image') {
+            steps {
+                withCredentials([usernamePassword(credentialsId:'DockerRepo', passwordVariable:'PASS' , usernameVariable:'USER')]) {
+                sh "docker build -t ${env.DOCKER_IMAGE_NAME}:1.0"
+                sh "echo $PASS | docker login -u $USER --password-stdin "
+                sh "docker push ${env.DOCKER_IMAGE_NAME}:1.0"
+                }
+            }
+        }
+
 
 
         stage('Test') {
@@ -39,7 +48,7 @@ pipeline {
                 }
             }
             steps {
-                echo " Building ... "
+                echo " Testing ... "
             }
         }
 
@@ -52,27 +61,6 @@ pipeline {
                 echo " Deploying ...  " 
             }
         }
-
-
-
-        stage('Build Docker Image') {
-            steps {
-                script {
-                    // Build the Docker image
-                    docker.build("${env.DOCKER_IMAGE_NAME}:1.0")
-                }
-            }
-        }
-
-        stage('Push Docker Image') {
-            steps {
-                script {
-                    // Log in to Docker registry and push the Docker image
-                    docker.withRegistry('https://index.docker.io/v1/', "${env.DockerRepo_Credentials}") {
-                        docker.image("${env.DOCKER_IMAGE_NAME}:1.0").push('1.0')
-                    }
-                }
-            }
 
         
     }
