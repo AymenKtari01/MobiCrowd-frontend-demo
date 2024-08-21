@@ -76,17 +76,16 @@ export class EncoderComponent implements OnInit {
 
 
   convertMetadata(inputs: string[]): number[][] {
-    const metadata = [];
+    const metadata: number[][] = [];  // Explicitly type metadata
     for (let i = 0; i < 8; i++) {
-
       const value = parseFloat(inputs[i]);
-      for (let j=0 ; j<3 ; j++){
+      for (let j = 0; j < 3; j++) {
         metadata.push([isNaN(value) ? 0 : value, isNaN(value) ? 0 : value, isNaN(value) ? 0 : value]);
       }
-
     }
     return metadata;
   }
+  
   
 
   concatenateMetadata(imageTensor: tf.Tensor, metadata: number[][]): tf.Tensor {
