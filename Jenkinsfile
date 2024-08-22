@@ -32,13 +32,19 @@ pipeline {
 
         stage('Build and Push Docker Image') {
             steps {
-                script {
-                    docker.withRegistry('https://index.docker.io/v1/', env.DOCKER_CREDENTIALS_ID) {
-                        def customImage = docker.build("${env.DOCKER_IMAGE_NAME}:1.0")
-                        customImage.push('latest')
-                        customImage.push('1.0')
-                    }
+                echo 'Building Image ... '
+                withCredentials([usernamePassword(credentialsId: 'DockerRepo' , passwordVariable: 'PASS' , usernameVariable : 'USER')]){
+                sh "docker build -t ${DOCKER_IMAGE_NAME}:1.0 ."
+                sh "echo $PASS | docker login -u $USER --password-stdin"
+                sh "docker push ${DOCKER_IMAGE_NAME}:1.0 " 
                 }
+                // script {
+                //     docker.withRegistry('https://index.docker.io/v1/', env.DOCKER_CREDENTIALS_ID) {
+                //         def customImage = docker.build("${env.DOCKER_IMAGE_NAME}:1.0")
+                //         customImage.push('latest')
+                //         customImage.push('1.0')
+                //     }
+                // }
             }
         }
 
