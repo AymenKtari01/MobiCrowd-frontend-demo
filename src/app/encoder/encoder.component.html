@@ -21,9 +21,9 @@
   <div class="right-side">
     <h2>Results</h2>
     <!-- Display the reconstructed image -->
-    <div *ngIf="imageUrl" style="text-align: center;">
+    <div *ngIf="image" style="text-align: center;">
       <h3>Reconstructed Image:</h3>
-      <img [src]="imageUrl" alt="Reconstructed Image">
+      <img [src]="image" alt="Reconstructed Image">
     </div>
     
     <!-- Display the predicted class name -->

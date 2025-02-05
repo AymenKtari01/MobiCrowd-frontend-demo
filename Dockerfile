@@ -1,4 +1,4 @@
-## Without Jenkins 
+# # Without Jenkins 
 # FROM node:latest as build 
 # WORKDIR /usr/local/app
 # COPY ./ /usr/local/app/

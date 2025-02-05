@@ -12,15 +12,17 @@ import { JsonPipe } from '@angular/common';
   templateUrl: './encoder.component.html',
   styleUrls: ['./encoder.component.css']
 })
+
 export class EncoderComponent implements OnInit {
   model!: tf.LayersModel;
   selectedImage: HTMLImageElement | null = null;
   metadataInputs: string[] = Array(8).fill(''); // Holds the 8 pieces of input metadata
   imageUrl: string | null = null; // Holds the image URL
   metadata: number[] = []; // Holds the reconstructed metadata
-  predictedClass: number | null = null; // Holds the predicted class
+  predictedClass: string | null = null; // Holds the predicted class
   classNames: string[] = ['Flood', 'Fire', 'Others']; // List of class names
   predictedClassName: string | null = null; // Holds the predicted class name
+  image : any ; 
 
 
   constructor(private cdr: ChangeDetectorRef, private http: HttpClient) {}
@@ -54,27 +56,102 @@ export class EncoderComponent implements OnInit {
 
   
   preprocessImage(image: HTMLImageElement): tf.Tensor {
+
+
+      // Create a canvas with the same size as the original image
+  const originalCanvas = document.createElement('canvas');
+  originalCanvas.width = image.width;
+  originalCanvas.height = image.height;
+  const originalCtx = originalCanvas.getContext('2d');
+
+  if (!originalCtx) {
+    throw new Error('Failed to get original canvas context');
+  }
+
+  // Draw the original image onto the original-sized canvas
+  originalCtx.drawImage(image, 0, 0, image.width, image.height);
+
+  // Get the original image data before resizing
+  const originalImageData = originalCtx.getImageData(0, 0, image.width, image.height);
+  console.log('Original Image Dimensions:', image.width, image.height);
+  console.log('Original Image Data:', originalImageData.data); // Log original image array
+    
     const canvas = document.createElement('canvas');
     canvas.width = 64;
     canvas.height = 64;
     const ctx = canvas.getContext('2d');
+
     if (!ctx) {
       throw new Error('Failed to get canvas context');
     }
+
     ctx.drawImage(image, 0, 0, 64, 64);
 
     const imageData = ctx.getImageData(0, 0, 64, 64);
     const data = imageData.data;
     const normalizedData: number[] = [];
     for (let i = 0; i < data.length; i += 4) {
-      normalizedData.push(data[i] / 255, data[i + 1] / 255, data[i + 2] / 255);
+
+      normalizedData.push( data[i] / 255 , data[i + 1] / 255 , data[i + 2] / 255 );
+
     }
 
-    return tf.tensor3d(normalizedData, [64, 64, 3]);
+    this.image= canvas.toDataURL()
+    return tf.tensor3d(normalizedData, [64, 64, 3]); 
+
     
   }
 
 
+
+
+  resizeAndNormalizeImage(image: HTMLImageElement): Promise<number[][][]> {
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+  
+      // Set the canvas dimensions to 64x64
+      canvas.width = 64;
+      canvas.height = 64;
+  
+      // Check if ctx (context) is null
+      if (ctx) {
+        // Draw the image on the canvas and resize it to 64x64
+        ctx.drawImage(image, 0, 0, 64, 64);
+  
+        // Extract the pixel data from the canvas (RGBA)
+        const imgData = ctx.getImageData(0, 0, 64, 64).data;
+        const resizedImage: number[][] = []; // Changed to 2D array
+  
+        // Iterate through the pixel data and normalize each RGB value to [0, 1]
+        for (let i = 0; i < imgData.length; i += 4) {
+          const r = parseFloat((imgData[i] / 255).toFixed(6));   // Red
+          const g = parseFloat((imgData[i + 1] / 255).toFixed(6)); // Green
+          const b = parseFloat((imgData[i + 2] / 255).toFixed(6)); // Blue
+          // Ignore the alpha channel and push the RGB values as an array
+          resizedImage.push([r, g, b]);
+        }
+  
+        // Reshape the array into 64x64x3 format
+        const reshapedImage: number[][][] = [];
+        for (let i = 0; i < 64; i++) {
+          const row: number[][] = []; // Each row will contain 64 RGB values
+          for (let j = 0; j < 64; j++) {
+            const index = i * 64 + j;
+            row.push(resizedImage[index]); // Push the RGB array
+          }
+          reshapedImage.push(row); // Push the row to reshapedImage
+        }
+  
+        console.log("Preprocessed Image Tensor (Angular):", reshapedImage);
+        resolve(reshapedImage);
+      } else {
+        reject(new Error("Failed to get 2D context for the canvas."));
+      }
+    });
+  }
+  
+  
   convertMetadata(inputs: string[]): number[][] {
     const metadata: number[][] = [];  // Explicitly type metadata
     for (let i = 0; i < 8; i++) {
@@ -131,21 +208,32 @@ export class EncoderComponent implements OnInit {
         alert('Please fill all metadata fields.');
         return;
       }
-  
+
+      // *************************************************************************************
+      // const test =this.resizeAndNormalizeImage(this.selectedImage);
+      // console.log('64x64 test image :', test );
+      // *************************************************************************************
+
+
       const imageTensor = this.preprocessImage(this.selectedImage);
+      this.image= imageTensor; 
+      const imageArray = await imageTensor.array();
+      console.log('64x64 image:', imageArray);
+
+      console.log('64x64 image :', imageTensor.array() );
       const metadata = this.convertMetadata(this.metadataInputs);
   
       if (metadata) {
         const concatenatedTensor = this.concatenateMetadata(imageTensor, metadata);
         const inputTensor = concatenatedTensor.expandDims(0);
+
         const predictions = this.model.predict(inputTensor) as tf.Tensor;
-  
         const embedding = await predictions.array();
         console.log('Embedding:', embedding);
   
         this.sendEmbedding(embedding);
   
-        this.cdr.detectChanges();
+        // this.cdr.detectChanges();
   
       } else {
         console.error('Invalid metadata input.');
@@ -158,19 +246,20 @@ export class EncoderComponent implements OnInit {
 
   sendEmbedding(embedding: any): void {
     console.log('Sending embedding:', embedding); // Check the structure here
+    console.log(typeof embedding)
     this.http.post('http://localhost:8000/embedding/', { encoded: embedding }, {
       headers: { 'Content-Type': 'application/json' }
     })
     .subscribe(
       (response: any) => {
         console.log('Successfully sent embedding to backend:', response);
-        this.imageUrl = `data:image/png;base64,${response.image_base64}`;
-        this.metadata = response.metadata;
+        // this.imageUrl = `data:image/png;base64,${response.image_base64}`;
+        // this.metadata = response.metadata;
         this.predictedClass = response.predicted_class; // Set the predicted class index
   
         // Map the index to the corresponding class name
-        if (this.predictedClass !== null && this.predictedClass < this.classNames.length) {
-          this.predictedClassName = this.classNames[this.predictedClass];
+        if (this.predictedClass !== null ) {
+          this.predictedClassName = this.predictedClass;
         } else {
           this.predictedClassName = 'Unknown';
         }
